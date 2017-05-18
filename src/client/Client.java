@@ -9,10 +9,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Arrays;
-import java.util.List;
 
 public class Client {
 
@@ -33,36 +30,37 @@ public class Client {
 
     public static final byte ZERO = 0;
 
-    private static final String IP = "127.0.0.1";
     InetAddress inetAddress;
-    private int port = 69;
 
     private DatagramSocket socket;
     private DatagramPacket packet;
     private static final int DATA_SIZE = 512;
+    private int port;
 
     public static void main(String[] args) throws IOException {
         Client client = new Client();
-        client.sendFile("fichier_gros.txt");
+        client.sendFile("127.0.0.1", 69, "fichier_gros.txt");
         //client.receiveFile("fichier_gros.txt", "grosDL.txt");
     }
 
     //rajouter une valeur de retourCrEm
-    private void sendFile(String filename) throws FileNotFoundException, IOException {
-
+    public void sendFile(String serverIP, int serverPort, String filename) throws FileNotFoundException, IOException {
+        
+        this.port = serverPort;
+        
         // Créer DatagramSocket
         socket = new DatagramSocket();
-
+        
         // Envoyer packet WRQ
-        inetAddress = InetAddress.getByName(IP);
+        inetAddress = InetAddress.getByName(serverIP);
         byte[] data = createRequestPacket(WRQ, filename, "octet");
-        packet = new DatagramPacket(data, data.length, inetAddress, port);
+        packet = new DatagramPacket(data, data.length, inetAddress, serverPort);
         socket.send(packet);
 
         // Recevoir ACK pour confirmation envoi fichier
         socket.receive(packet);
         byte[] receivedACK = packet.getData();
-        port = packet.getPort();
+        serverPort = packet.getPort();
 
         if (isFirstACK(receivedACK)) {
             FileInputStream file = null;
@@ -105,7 +103,7 @@ public class Client {
 
                 // Envoyer packet DATA
                 byte[] datagram = createDataPacket(ack, toSend);
-                packet = new DatagramPacket(datagram, datagram.length, inetAddress, port);
+                packet = new DatagramPacket(datagram, datagram.length, inetAddress, serverPort);
                 socket.send(packet);
 
                 /*System.out.print("Envoyé : ");
@@ -136,14 +134,16 @@ public class Client {
         socket.close();
     }
 
-    private void receiveFile(String filename, String localName) throws FileNotFoundException, SocketException, UnknownHostException, IOException {
+    public void receiveFile(String serverIP, int serverPort, String filename, String localName) throws FileNotFoundException, SocketException, UnknownHostException, IOException {
 
+        this.port = serverPort;
+        
         byte[] ack = new byte[2]; // Pour contenir le numero d'ACK
         socket = new DatagramSocket();
-        inetAddress = InetAddress.getByName(IP);
+        inetAddress = InetAddress.getByName(serverIP);
         // Créer DatagramSocket
         byte[] rrq = createRequestPacket(RRQ, filename, "octet");
-        packet = new DatagramPacket(rrq, rrq.length, inetAddress, port);
+        packet = new DatagramPacket(rrq, rrq.length, inetAddress, serverPort);
         // Envoyer packet RRQ
         socket.send(packet);
 
@@ -160,7 +160,7 @@ public class Client {
             // Réception packet DATA
             data = new DatagramPacket(bufferOutputFile, bufferOutputFile.length);
             socket.receive(data);
-            port = data.getPort();
+            serverPort = data.getPort();
 
             //écriture des données si le packet est de type DATA
             if (isType(data.getData(), DATA)) {
@@ -168,7 +168,7 @@ public class Client {
                     localFile.write(data.getData()[i]);
                 }
                 ack2Send = createACKPacket(ack);
-                packet = new DatagramPacket(ack2Send, ack2Send.length, inetAddress, port);
+                packet = new DatagramPacket(ack2Send, ack2Send.length, inetAddress, serverPort);
                 socket.send(packet);
                 
                 System.out.println("ACK : " + ack[0] + " | " + ack[1]);

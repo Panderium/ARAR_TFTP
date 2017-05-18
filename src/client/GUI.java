@@ -6,6 +6,7 @@
 package client;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -15,21 +16,18 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -38,6 +36,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -59,7 +58,10 @@ public class GUI extends Application {
             clearChatButtonReceive, logOutButtonReceive, openFileChooserReceive,
             sendFile, receiveFile;
     private TextField fileNameOnServerTextField, fileNameOnClientTextField;
-
+    private File receivedFile, downloadPath;
+    private FileChooser fileChooserSend;
+    private DirectoryChooser directoryChooser;
+    
     /**
      * @param args the command line arguments
      */
@@ -141,8 +143,8 @@ public class GUI extends Application {
         this.logOutButtonSend = new Button("Log out");
         this.logOutButtonSend.setFont(Font.font("Tahoma", FontWeight.NORMAL, 13));
         
-        FileChooser fileChooserSend = new FileChooser();
-        fileChooserSend.setTitle("Chosir un fichier à envoyer");
+        this.fileChooserSend = new FileChooser();
+        this.fileChooserSend.setTitle("Chosir un fichier à envoyer");
         
         this.sendFile = new Button("Envoyer");
         this.receiveFile = new Button("Recevoir");
@@ -170,8 +172,8 @@ public class GUI extends Application {
         this.logOutButtonReceive = new Button("Log out");
         this.logOutButtonReceive.setFont(Font.font("Tahoma", FontWeight.NORMAL, 13));
         
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Chosir un fichier à envoyer");
+        this.directoryChooser = new DirectoryChooser();
+        directoryChooser.setTitle("Chosir l'emplacement de sauvegarde");
         
         this.sendFile = new Button("Envoyer");
         this.receiveFile = new Button("Recevoir");
@@ -287,9 +289,9 @@ public class GUI extends Application {
         this.openFileChooserSend.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               File file = fileChooser.showOpenDialog(primaryStage);
-                    if (file != null) {
-                        fileLabelSend.setText(file.getName());;
+               receivedFile = fileChooserSend.showOpenDialog(primaryStage);
+                    if (receivedFile != null) {
+                        fileLabelSend.setText(receivedFile.getName());;
                     }
             }
         });
@@ -297,9 +299,9 @@ public class GUI extends Application {
         this.openFileChooserReceive.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               File file = fileChooser.showOpenDialog(primaryStage);
-                    if (file != null) {
-                        fileLabelReceive.setText(file.getName());;
+                downloadPath = directoryChooser.showDialog(primaryStage);
+                    if (downloadPath != null) {
+                        fileLabelReceive.setText(downloadPath.getName());;
                     }
             }
         });
@@ -307,7 +309,22 @@ public class GUI extends Application {
         this.sendFile.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               
+                try {
+                    client.sendFile(serverAddressTextField.getText(), 69, receivedFile.getName());
+                } catch (IOException ex) {
+                    Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+        
+        this.receiveFile.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                try {
+                    client.receiveFile(serverAddressTextField.getText(), 69, fileNameOnServerTextField.getText(), downloadPath.getPath() + downloadPath.getName());
+                } catch (IOException ex) {
+                    Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         });
         
@@ -324,7 +341,16 @@ public class GUI extends Application {
             @Override
             public void handle(KeyEvent keyEvent) {
                 if (keyEvent.getCode() == KeyCode.ENTER)  {
-                    signInButton.fire();
+                    sendFile.fire();
+                }
+            }
+        });
+        
+        fileNameOnClientTextField.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent keyEvent) {
+                if (keyEvent.getCode() == KeyCode.ENTER)  {
+                    sendFile.fire();
                 }
             }
         });
@@ -341,8 +367,6 @@ public class GUI extends Application {
         
         sendFilePane.add(this.IPAddressLabelSend, 0, 0);
         sendFilePane.add(this.IPAddressSend, 1, 0);
-        sendFilePane.add(this.portTextLabelSend, 2, 0);
-        sendFilePane.add(this.portLabelSend, 3, 0);
         sendFilePane.add(this.clearChatButtonSend, 4, 0);
         sendFilePane.add(this.logOutButtonSend, 5, 0);
 
@@ -351,13 +375,7 @@ public class GUI extends Application {
         this.fileLabelSend.setTextFill(Color.GREEN);
         sendFilePane.add(this.fileLabelSend, 2, 1,  3, 1);
         
-        Label fileNameOnServer = new Label("Nom du fichier distant:");
-        sendFilePane.add(fileNameOnServer, 0, 2, 3, 1);
-        
-        this.fileNameOnServerTextField = new TextField();
-        sendFilePane.add(fileNameOnServerTextField, 3, 2);
-        
-        sendFilePane.add(this.sendFile, 5, 2);
+        sendFilePane.add(this.sendFile, 0, 2);
         
         
         sendFilePane.add(this.spSend, 0, 3, 6, 30);
@@ -379,8 +397,6 @@ public class GUI extends Application {
         
         receiveFilePane.add(this.IPAddressLabelReceive, 0, 0);
         receiveFilePane.add(this.IPAddressReceive, 1, 0);
-        receiveFilePane.add(this.portTextLabelReceive, 2, 0);
-        receiveFilePane.add(this.portLabelReceive, 3, 0);
         receiveFilePane.add(this.clearChatButtonReceive, 4, 0);
         receiveFilePane.add(this.logOutButtonReceive, 5, 0);
 
@@ -390,22 +406,22 @@ public class GUI extends Application {
         this.fileNameOnServerTextField = new TextField();
         receiveFilePane.add(fileNameOnServerTextField, 3, 1, 3, 1);
         
-        Label filePathOnClient = new Label("Dossier de téléchargement:");
-        receiveFilePane.add(filePathOnClient, 0, 2, 2, 1);
-        receiveFilePane.add(this.openFileChooserReceive, 2, 2, 2, 1);
-        this.fileLabelReceive = new Label();
-        this.fileLabelReceive.setTextFill(Color.GREEN);
-        receiveFilePane.add(this.fileLabelReceive, 4, 2,  3, 1);
-        
-        Label fileNameOnClient = new Label("Nom du fichier distant:");
-        receiveFilePane.add(fileNameOnClient, 0, 3, 3, 1);
+        Label fileNameOnClient = new Label("Nom du fichier local:");
+        receiveFilePane.add(fileNameOnClient, 0, 2, 3, 1);
         
         this.fileNameOnClientTextField = new TextField();
-        receiveFilePane.add(fileNameOnClientTextField, 3, 3, 3, 1);
+        receiveFilePane.add(fileNameOnClientTextField, 3, 2, 3, 1);
         
-        receiveFilePane.add(this.receiveFile, 3, 3);
+        Label filePathOnClient = new Label("Dossier de téléchargement:");
+        receiveFilePane.add(filePathOnClient, 0, 3, 2, 1);
+        receiveFilePane.add(this.openFileChooserReceive, 2, 3, 2, 1);
+        this.fileLabelReceive = new Label();
+        this.fileLabelReceive.setTextFill(Color.GREEN);
+        receiveFilePane.add(this.fileLabelReceive, 4, 3,  3, 1);
         
-        receiveFilePane.add(this.spReceive, 0, 3, 6, 20);
+        receiveFilePane.add(this.receiveFile, 3, 4);
+        
+        receiveFilePane.add(this.spReceive, 0, 5, 6, 20);
 
         return receiveFilePane;
     }  
