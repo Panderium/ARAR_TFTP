@@ -43,7 +43,8 @@ public class Client {
 
     public static void main(String[] args) throws IOException {
         Client client = new Client();
-        client.receiveFile("fichier_immense.txt");
+        client.sendFile("fichier_gros.txt");
+        //client.receiveFile("fichier_gros.txt", "grosDL.txt");
     }
 
     //rajouter une valeur de retourCrEm
@@ -135,10 +136,9 @@ public class Client {
         socket.close();
     }
 
-    private void receiveFile(String filename) throws FileNotFoundException, SocketException, UnknownHostException, IOException {
+    private void receiveFile(String filename, String localName) throws FileNotFoundException, SocketException, UnknownHostException, IOException {
 
         byte[] ack = new byte[2]; // Pour contenir le numero d'ACK
-        // Création fichier local filename
         socket = new DatagramSocket();
         inetAddress = InetAddress.getByName(IP);
         // Créer DatagramSocket
@@ -147,12 +147,9 @@ public class Client {
         // Envoyer packet RRQ
         socket.send(packet);
 
-        //Create local file, error if already created
-        FileOutputStream localFile = new FileOutputStream("fichier2.txt");
+        //Crée le fichier local ou écrase si existant
+        FileOutputStream localFile = new FileOutputStream(localName);
 
-        // Envoi packet ACK pour confirmation
-        //packet = new DatagramPacket(ack, PORT);
-        // Refaire tant qu'on a des données à recevoir
         //init ack
         ack[0] = ZERO;
         ack[1] = (byte) 1;
@@ -170,18 +167,20 @@ public class Client {
                 for (int i = 4; i < data.getLength(); i++) {
                     localFile.write(data.getData()[i]);
                 }
+                ack2Send = createACKPacket(ack);
+                packet = new DatagramPacket(ack2Send, ack2Send.length, inetAddress, port);
+                socket.send(packet);
+                
+                System.out.println("ACK : " + ack[0] + " | " + ack[1]);
+                
+                //preparation prochain ack
+                ack[1]++;
+                if (ack[1] == 0) {
+                    ack[0]++;
+                }
             } else if (isType(data.getData(), ERROR)) {
                 manageError(data.getData()[3]);
             }
-            //System.out.println("Packet lenght : " + data.getLength());
-
-            ack2Send = createACKPacket(ack);
-            packet = new DatagramPacket(ack2Send, ack2Send.length, inetAddress, port);
-            socket.send(packet);
-            System.out.println("ACK : " + ack[0] + " | " + ack[1]);
-
-            //preparation prochain ack
-            addACK(ack, ack);
         } while (data.getLength() >= 512);
 
         // Fermeture fichier local
@@ -290,7 +289,7 @@ public class Client {
         number++;
         ack[0] = (byte) (number / 128);
         ack[1] = (byte) (number % 128);*/
-        ack[1] = (byte)(received[1] + 1);
+        ack[1] = (byte) (received[1] + 1);
         if (ack[1] == 0) {
             ack[0]++;
         }
