@@ -40,7 +40,7 @@ public class Client {
     public static void main(String[] args) throws IOException {
         Client client = new Client();
         client.sendFile("127.0.0.1", 69, "fichier_gros.txt");
-        //client.receiveFile("fichier_gros.txt", "grosDL.txt");
+        //client.receiveFile("127.0.0.1", 69,"fichier_gros.txt", "grosDL.txt");
     }
 
     //rajouter une valeur de retourCrEm

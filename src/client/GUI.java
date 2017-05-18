@@ -58,7 +58,7 @@ public class GUI extends Application {
             clearChatButtonReceive, logOutButtonReceive, openFileChooserReceive,
             sendFile, receiveFile;
     private TextField fileNameOnServerTextField, fileNameOnClientTextField;
-    private File receivedFile, downloadPath;
+    private File fileToSend, downloadPath;
     private FileChooser fileChooserSend;
     private DirectoryChooser directoryChooser;
     
@@ -289,9 +289,9 @@ public class GUI extends Application {
         this.openFileChooserSend.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               receivedFile = fileChooserSend.showOpenDialog(primaryStage);
-                    if (receivedFile != null) {
-                        fileLabelSend.setText(receivedFile.getName());;
+               fileToSend = fileChooserSend.showOpenDialog(primaryStage);
+                    if (fileToSend != null) {
+                        fileLabelSend.setText(fileToSend.getAbsolutePath());;
                     }
             }
         });
@@ -310,7 +310,7 @@ public class GUI extends Application {
             @Override
             public void handle(ActionEvent e) {
                 try {
-                    client.sendFile(serverAddressTextField.getText(), 69, receivedFile.getName());
+                    client.sendFile(serverAddressTextField.getText(), 69, fileToSend.getAbsolutePath());
                 } catch (IOException ex) {
                     Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -321,7 +321,7 @@ public class GUI extends Application {
             @Override
             public void handle(ActionEvent e) {
                 try {
-                    client.receiveFile(serverAddressTextField.getText(), 69, fileNameOnServerTextField.getText(), downloadPath.getPath() + downloadPath.getName());
+                    client.receiveFile(serverAddressTextField.getText(), 69, fileNameOnServerTextField.getText(), downloadPath.getPath() + fileNameOnClientTextField.getText());
                 } catch (IOException ex) {
                     Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
                 }
