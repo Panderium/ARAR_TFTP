@@ -41,11 +41,6 @@ public class Client {
     private DatagramPacket packet;
     private static final int DATA_SIZE = 512;
     
-    public static void main(String[] args) throws IOException {
-        Client client = new Client();
-        client.sendFile("fichier.txt");
-    }
-    
     private void sendFile(String filename) throws FileNotFoundException, IOException {
         
         // Créer DatagramSocket
@@ -280,4 +275,38 @@ public class Client {
             System.out.print(array[i]);
         System.out.println();
     }
+
+    public InetAddress getInetAddress() {
+        return inetAddress;
+    }
+
+    public void setInetAddress(InetAddress inetAddress) {
+        this.inetAddress = inetAddress;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public DatagramSocket getSocket() {
+        return socket;
+    }
+
+    public void setSocket(DatagramSocket socket) {
+        this.socket = socket;
+    }
+
+    public DatagramPacket getPacket() {
+        return packet;
+    }
+
+    public void setPacket(DatagramPacket packet) {
+        this.packet = packet;
+    }
+    
+    
 }
