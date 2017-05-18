@@ -43,9 +43,10 @@ public class Client {
     
     public static void main(String[] args) throws IOException {
         Client client = new Client();
-        client.sendFile("fichier.txt");
+        client.receiveFile("fichier_gros.txt");
     }
     
+    //rajouter une valeur de retourCrEm
     private void sendFile(String filename) throws FileNotFoundException, IOException {
         
         // Créer DatagramSocket
@@ -145,27 +146,64 @@ public class Client {
     
     private void receiveFile(String filename) throws FileNotFoundException, SocketException, UnknownHostException, IOException {
         
-        boolean fini = false;
         byte[] ack = new byte[2]; // Pour contenir le numero d'ACK
         // Création fichier local filename
         socket = new DatagramSocket();
         inetAddress = InetAddress.getByName(IP);
         // Créer DatagramSocket
-        byte[] data = createRequestPacket(RRQ, filename, "octet");
-        packet = new DatagramPacket(data, data.length, inetAddress, port);
+        byte[] rrq = createRequestPacket(RRQ, filename, "octet");
+        packet = new DatagramPacket(rrq, rrq.length, inetAddress, port);
         // Envoyer packet RRQ
         socket.send(packet);
         
-        // Réception packet DATA
-        socket.receive(packet);
-        // Ecriture données dans fichier local
-        FileOutputStream fichier = new FileOutputStream(filename);
-        //fichier.write(data);
+        //Create local file, error if already created
+        FileOutputStream localFile = new FileOutputStream("C:\\Users\\alexa\\Desktop\\ARAR_TFTP\\fichier2.txt");
         
         // Envoi packet ACK pour confirmation
         //packet = new DatagramPacket(ack, PORT);
         // Refaire tant qu'on a des données à recevoir
-        
+        //init ack
+        ack[0] = ZERO;
+        ack[1] = (byte)1;
+        DatagramPacket data;
+        byte[] ack2Send;
+        do
+        {
+            byte[] bufferOutputFile = new byte[516];
+            // Réception packet DATA
+            data = new DatagramPacket(bufferOutputFile, bufferOutputFile.length);
+            socket.receive(data);
+            port = data.getPort();
+            
+            //écriture des données si le packet est de type DATA
+            if (data.getData()[1] == DATA) {
+                for (int i = 4; i < data.getLength(); i++) 
+                {
+                    localFile.write(data.getData()[i]);
+                }
+                
+            }
+            System.out.println("lenght" + data.getLength());
+            System.out.println(data.getData()[1] == DATA);
+            
+            ack2Send = createACKPacket(ack);
+            packet = new DatagramPacket(ack2Send, ack2Send.length, inetAddress, port);
+            socket.send(packet);
+            System.out.println('1');
+            
+            //preparation prochain ack
+            ack[1] ++;
+            if (ack[1] == 0) {
+                ack[0] ++;
+            }
+            
+           // socket.receive(packet);
+            //System.out.println(packet.getData().length);
+            //System.out.println(packet.getData().length);
+
+            
+        }while(data.getLength() >= 512);
+        /*
         while (!fini)
         {
             byte bufferReception[] = new byte[516];
@@ -186,9 +224,10 @@ public class Client {
             socket.send(a);
 
             fini = donnees.getLength() < 512;
-        }
+        }*/
         
         // Fermeture fichier local
+        localFile.close();
     }
     
     
