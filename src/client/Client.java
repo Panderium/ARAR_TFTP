@@ -1,6 +1,5 @@
 package client;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -10,6 +9,10 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Arrays;
+import java.util.List;
 
 public class Client {
     
@@ -32,7 +35,7 @@ public class Client {
     
     private static final String IP = "127.0.0.1";
     InetAddress inetAddress;
-    private static final int PORT = 69;
+    private int port = 69;
     
     private DatagramSocket socket;
     private DatagramPacket packet;
@@ -51,48 +54,82 @@ public class Client {
         // Envoyer packet WRQ
         inetAddress = InetAddress.getByName(IP);
         byte[] data = createRequestPacket(WRQ, filename, "octet");
-        packet = new DatagramPacket(data, data.length, inetAddress, PORT);
+        packet = new DatagramPacket(data, data.length, inetAddress, port);
         socket.send(packet);
     
         // Recevoir ACK pour confirmation envoi fichier
         socket.receive(packet);
         byte[] receivedACK = packet.getData();
+        port = packet.getPort();
+        
         if(isFirstACK(receivedACK)) {
-            File f;          // Pour connaître la taille ensuite
             FileInputStream file = null;
-            int block = 0;
-            long fileLength = 0;
             byte[] ack = new byte[2];
             // Lecture fichier local
             try {
-            f = new File(filename);
-            fileLength = f.length();
 
-            file = new FileInputStream(f);
+            file = new FileInputStream(filename);
 
             } catch(FileNotFoundException e) {
                 System.err.println("Erreur ouverture fichier : " + e);
+                return;
             }
-            // Calcul du nombre de paquet à envoyer
-            block = (int)fileLength / DATA_SIZE + 1;
-            System.out.println("Block : " + block);
             
             ack[0] = ZERO;
-            ack[1] = ZERO;
+            ack[1] = (byte)1;
+            boolean eof = false;
+            int nbRead = DATA_SIZE; // Par défaut, si on n'entre pas dans le eof, c'est qu'on a lu 512 char
+            
+            // Envoi de données tant qu'on a pas atteint la fin de fichier
             do
             {
+                byte[] dataRead = new byte[DATA_SIZE];
+                
+                // Lecture du fichier
+                int byteRead = 0;
+                for(int i = 0; i < DATA_SIZE && byteRead != -1; i++) {
+                   byteRead = file.read();
+                   if(byteRead != -1) {
+                       dataRead[i] = (byte)byteRead;
+                   }
+                   else {
+                       // Dernier paquet à envoyer
+                       eof = true;
+                       nbRead = i; // Sert pour créer le tableau final de bytes
+                       //System.out.println(i + " caractères lus, dernièr");
+                   }
+                }
+                
+                // Copie uniquement des bytes nécessaires
+                byte[] toSend = Arrays.copyOf(dataRead, nbRead);
+                
                 // Envoyer packet DATA
-
+                byte[] datagram = createDataPacket(ack, toSend);
+                packet = new DatagramPacket(datagram, datagram.length, inetAddress, port);
+                socket.send(packet);
+                
+                /*System.out.print("Envoyé : ");
+                printBytes(datagram);*/
+                
                 // Recevoir packet ACK
                 socket.receive(packet);
-                receivedACK = packet.getData();
-                if(isType(receivedACK, ACK)) { // Si le serveur renvoie un ACK
-                    block--;
+                byte[] receivedPacket = packet.getData();
+                if(isType(receivedPacket, ACK)) { // Si le serveur renvoie un ACK
+                    byte[] received = {receivedPacket[2], receivedPacket[3]};
+                    System.out.println("ACK RECU : " + receivedPacket[2] + " | " + receivedPacket[3]);
+                    addACK(ack, received);
                 }
-            }while(block > 0);
+                else if(isType(receivedPacket, ERROR)) {
+                    // On a pas reçu un ACK
+                    System.err.print("ERREUR : ");
+                    // On envoie le code d'erreur la fonction explicitant l'erreur
+                    manageError(receivedPacket[3]);
+                }
+            }while(!eof);
 
             // Fermeture fichier local
-            file.close();
+            if(file != null)
+                file.close();
         }
         else if(isType(receivedACK, ERROR)) {
             // On a pas reçu un ACK
@@ -100,9 +137,10 @@ public class Client {
             // On envoie le code d'erreur la fonction explicitant l'erreur
             manageError(receivedACK[3]);
         }
-        else        {
+        else {
             System.err.println("PAS RECU ACK, code reçu : " + receivedACK[1]);
         }
+        socket.close();
     }
     
     private void receiveFile(String filename) throws FileNotFoundException {
@@ -183,7 +221,7 @@ public class Client {
         
         // Data à partir de tab[4]
         System.arraycopy(data, 0, tab, 4, data.length);
-        
+                
         return tab;
     }
     
@@ -218,6 +256,14 @@ public class Client {
         }
     }
     
+    // Fonction qui ajoute un à l'ACK reçu
+    private void addACK(byte[] ack, byte[] received) {
+        int number = received[0] * 128 + received[1];
+        number++;
+        ack[0] = (byte)(number / 128);
+        ack[1] = (byte)(number % 128);
+    }
+    
     // Fonction qui vérifie si le packet est du type indiqué
     private boolean isType(byte[] packet, byte type) {
         return (packet[0] == 0 && packet[1] == type);
@@ -232,5 +278,6 @@ public class Client {
     private void printBytes(byte[] array) {
         for(int i = 0; i < array.length; i++)
             System.out.print(array[i]);
+        System.out.println();
     }
 }
