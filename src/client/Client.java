@@ -143,18 +143,50 @@ public class Client {
         socket.close();
     }
     
-    private void receiveFile(String filename) throws FileNotFoundException {
+    private void receiveFile(String filename) throws FileNotFoundException, SocketException, UnknownHostException, IOException {
+        
+        boolean fini = false;
         byte[] ack = new byte[2]; // Pour contenir le numero d'ACK
         // Création fichier local filename
-        
+        socket = new DatagramSocket();
+        inetAddress = InetAddress.getByName(IP);
         // Créer DatagramSocket
         byte[] data = createRequestPacket(RRQ, filename, "octet");
-        
+        packet = new DatagramPacket(data, data.length, inetAddress, port);
         // Envoyer packet RRQ
+        socket.send(packet);
+        
         // Réception packet DATA
+        socket.receive(packet);
         // Ecriture données dans fichier local
+        FileOutputStream fichier = new FileOutputStream(filename);
+        //fichier.write(data);
+        
         // Envoi packet ACK pour confirmation
+        //packet = new DatagramPacket(ack, PORT);
         // Refaire tant qu'on a des données à recevoir
+        
+        while (!fini)
+        {
+            byte bufferReception[] = new byte[516];
+            DatagramPacket donnees = new DatagramPacket(bufferReception, bufferReception.length);
+            socket.receive(donnees);
+            
+            //Construction et envoi de l'ACK
+            for (int k = 4; k < bufferReception.length; k++) {
+                    fichier.write(bufferReception[k]);
+            }
+
+            byte bufferEnvoi[] = new byte[516];
+            bufferEnvoi[0] = 0;
+            //bufferEnvoi[1] = (byte) Commun.TypePaquet.ACK.code;
+            bufferEnvoi[2] = bufferReception[2];
+            bufferEnvoi[3] = bufferReception[3];
+            DatagramPacket a = new DatagramPacket(bufferEnvoi, bufferEnvoi.length, inetAddress, donnees.getPort());
+            socket.send(a);
+
+            fini = donnees.getLength() < 512;
+        }
         
         // Fermeture fichier local
     }
