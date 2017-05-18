@@ -15,13 +15,13 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Client {
-    
+
     public static final byte RRQ = 1;
     public static final byte WRQ = 2;
     public static final byte DATA = 3;
     public static final byte ACK = 4;
     public static final byte ERROR = 5;
-    
+
     public static final byte ERROR_UNDEFINED = 0;
     public static final byte ERROR_FILE_NOT_FOUND = 1;
     public static final byte ERROR_VIOLATION = 2;
@@ -30,122 +30,113 @@ public class Client {
     public static final byte ERROR_UNKNOWN = 5;
     public static final byte ERROR_FILE_EXISTS = 6;
     public static final byte ERROR_USER = 7;
-    
+
     public static final byte ZERO = 0;
-    
+
     private static final String IP = "127.0.0.1";
     InetAddress inetAddress;
     private int port = 69;
-    
+
     private DatagramSocket socket;
     private DatagramPacket packet;
     private static final int DATA_SIZE = 512;
-    
+
     public static void main(String[] args) throws IOException {
         Client client = new Client();
-        client.receiveFile("fichier_gros.txt");
+        client.receiveFile("fichier_immense.txt");
     }
-    
+
     //rajouter une valeur de retourCrEm
     private void sendFile(String filename) throws FileNotFoundException, IOException {
-        
+
         // Créer DatagramSocket
         socket = new DatagramSocket();
-        
+
         // Envoyer packet WRQ
         inetAddress = InetAddress.getByName(IP);
         byte[] data = createRequestPacket(WRQ, filename, "octet");
         packet = new DatagramPacket(data, data.length, inetAddress, port);
         socket.send(packet);
-    
+
         // Recevoir ACK pour confirmation envoi fichier
         socket.receive(packet);
         byte[] receivedACK = packet.getData();
         port = packet.getPort();
-        
-        if(isFirstACK(receivedACK)) {
+
+        if (isFirstACK(receivedACK)) {
             FileInputStream file = null;
             byte[] ack = new byte[2];
             // Lecture fichier local
             try {
 
-            file = new FileInputStream(filename);
+                file = new FileInputStream(filename);
 
-            } catch(FileNotFoundException e) {
+            } catch (FileNotFoundException e) {
                 System.err.println("Erreur ouverture fichier : " + e);
                 return;
             }
-            
+
             ack[0] = ZERO;
-            ack[1] = (byte)1;
+            ack[1] = (byte) 1;
             boolean eof = false;
             int nbRead = DATA_SIZE; // Par défaut, si on n'entre pas dans le eof, c'est qu'on a lu 512 char
-            
+
             // Envoi de données tant qu'on a pas atteint la fin de fichier
-            do
-            {
+            do {
                 byte[] dataRead = new byte[DATA_SIZE];
-                
+
                 // Lecture du fichier
                 int byteRead = 0;
-                for(int i = 0; i < DATA_SIZE && byteRead != -1; i++) {
-                   byteRead = file.read();
-                   if(byteRead != -1) {
-                       dataRead[i] = (byte)byteRead;
-                   }
-                   else {
-                       // Dernier paquet à envoyer
-                       eof = true;
-                       nbRead = i; // Sert pour créer le tableau final de bytes
-                       //System.out.println(i + " caractères lus, dernièr");
-                   }
+                for (int i = 0; i < DATA_SIZE && byteRead != -1; i++) {
+                    byteRead = file.read();
+                    if (byteRead != -1) {
+                        dataRead[i] = (byte) byteRead;
+                    } else {
+                        // Dernier paquet à envoyer
+                        eof = true;
+                        nbRead = i; // Sert pour créer le tableau final de bytes
+                        //System.out.println(i + " caractères lus");
+                    }
                 }
-                
+
                 // Copie uniquement des bytes nécessaires
                 byte[] toSend = Arrays.copyOf(dataRead, nbRead);
-                
+
                 // Envoyer packet DATA
                 byte[] datagram = createDataPacket(ack, toSend);
                 packet = new DatagramPacket(datagram, datagram.length, inetAddress, port);
                 socket.send(packet);
-                
+
                 /*System.out.print("Envoyé : ");
                 printBytes(datagram);*/
-                
                 // Recevoir packet ACK
                 socket.receive(packet);
                 byte[] receivedPacket = packet.getData();
-                if(isType(receivedPacket, ACK)) { // Si le serveur renvoie un ACK
+                if (isType(receivedPacket, ACK)) { // Si le serveur renvoie un ACK
                     byte[] received = {receivedPacket[2], receivedPacket[3]};
                     System.out.println("ACK RECU : " + receivedPacket[2] + " | " + receivedPacket[3]);
                     addACK(ack, received);
-                }
-                else if(isType(receivedPacket, ERROR)) {
-                    // On a pas reçu un ACK
-                    System.err.print("ERREUR : ");
+                } else if (isType(receivedPacket, ERROR)) {
                     // On envoie le code d'erreur la fonction explicitant l'erreur
                     manageError(receivedPacket[3]);
                 }
-            }while(!eof);
+            } while (!eof);
 
             // Fermeture fichier local
-            if(file != null)
+            if (file != null) {
                 file.close();
-        }
-        else if(isType(receivedACK, ERROR)) {
-            // On a pas reçu un ACK
-            System.err.print("ERREUR : ");
+            }
+        } else if (isType(receivedACK, ERROR)) {
             // On envoie le code d'erreur la fonction explicitant l'erreur
             manageError(receivedACK[3]);
-        }
-        else {
+        } else {
             System.err.println("PAS RECU ACK, code reçu : " + receivedACK[1]);
         }
         socket.close();
     }
-    
+
     private void receiveFile(String filename) throws FileNotFoundException, SocketException, UnknownHostException, IOException {
-        
+
         byte[] ack = new byte[2]; // Pour contenir le numero d'ACK
         // Création fichier local filename
         socket = new DatagramSocket();
@@ -155,108 +146,74 @@ public class Client {
         packet = new DatagramPacket(rrq, rrq.length, inetAddress, port);
         // Envoyer packet RRQ
         socket.send(packet);
-        
+
         //Create local file, error if already created
-        FileOutputStream localFile = new FileOutputStream("C:\\Users\\alexa\\Desktop\\ARAR_TFTP\\fichier2.txt");
-        
+        FileOutputStream localFile = new FileOutputStream("fichier2.txt");
+
         // Envoi packet ACK pour confirmation
         //packet = new DatagramPacket(ack, PORT);
         // Refaire tant qu'on a des données à recevoir
         //init ack
         ack[0] = ZERO;
-        ack[1] = (byte)1;
+        ack[1] = (byte) 1;
         DatagramPacket data;
         byte[] ack2Send;
-        do
-        {
+        do {
             byte[] bufferOutputFile = new byte[516];
             // Réception packet DATA
             data = new DatagramPacket(bufferOutputFile, bufferOutputFile.length);
             socket.receive(data);
             port = data.getPort();
-            
+
             //écriture des données si le packet est de type DATA
-            if (data.getData()[1] == DATA) {
-                for (int i = 4; i < data.getLength(); i++) 
-                {
+            if (isType(data.getData(), DATA)) {
+                for (int i = 4; i < data.getLength(); i++) {
                     localFile.write(data.getData()[i]);
                 }
-                
+            } else if (isType(data.getData(), ERROR)) {
+                manageError(data.getData()[3]);
             }
-            System.out.println("lenght" + data.getLength());
-            System.out.println(data.getData()[1] == DATA);
-            
+            //System.out.println("Packet lenght : " + data.getLength());
+
             ack2Send = createACKPacket(ack);
             packet = new DatagramPacket(ack2Send, ack2Send.length, inetAddress, port);
             socket.send(packet);
-            System.out.println('1');
-            
+            System.out.println("ACK : " + ack[0] + " | " + ack[1]);
+
             //preparation prochain ack
-            ack[1] ++;
-            if (ack[1] == 0) {
-                ack[0] ++;
-            }
-            
-           // socket.receive(packet);
-            //System.out.println(packet.getData().length);
-            //System.out.println(packet.getData().length);
+            addACK(ack, ack);
+        } while (data.getLength() >= 512);
 
-            
-        }while(data.getLength() >= 512);
-        /*
-        while (!fini)
-        {
-            byte bufferReception[] = new byte[516];
-            DatagramPacket donnees = new DatagramPacket(bufferReception, bufferReception.length);
-            socket.receive(donnees);
-            
-            //Construction et envoi de l'ACK
-            for (int k = 4; k < bufferReception.length; k++) {
-                    fichier.write(bufferReception[k]);
-            }
-
-            byte bufferEnvoi[] = new byte[516];
-            bufferEnvoi[0] = 0;
-            //bufferEnvoi[1] = (byte) Commun.TypePaquet.ACK.code;
-            bufferEnvoi[2] = bufferReception[2];
-            bufferEnvoi[3] = bufferReception[3];
-            DatagramPacket a = new DatagramPacket(bufferEnvoi, bufferEnvoi.length, inetAddress, donnees.getPort());
-            socket.send(a);
-
-            fini = donnees.getLength() < 512;
-        }*/
-        
         // Fermeture fichier local
         localFile.close();
     }
-    
-    
+
     // Fonction pour créer le packet ACK
     private byte[] createACKPacket(byte[] ackNumber) {
         byte[] tab = new byte[4];
-        
+
         tab[0] = 0;
         tab[1] = ACK;
-        
+
         tab[2] = ackNumber[0];
         tab[3] = ackNumber[1];
-        
+
         return tab;
     }
-    
+
     // Fonction pour créer le packet request RRQ/WRQ
     private byte[] createRequestPacket(final byte code, final String filename, final String mode) {
         int tabSize = 2 + filename.length() + 1 + mode.length() + 1;
         byte[] tab = new byte[tabSize];
         int cursor = 0;
-        
+
         // CODE
         tab[0] = ZERO;
         tab[1] = code;
-        
+
         // FILENAME
-        for(int i = 0; i < filename.length(); i++) {
-            tab[i + 2] = (byte)filename.charAt(i);
+        for (int i = 0; i < filename.length(); i++) {
+            tab[i + 2] = (byte) filename.charAt(i);
             cursor = i + 2;
         }
 
@@ -264,42 +221,42 @@ public class Client {
         cursor++;
         tab[cursor] = ZERO;
         cursor++;
-    
+
         // MODE
-        for(int i = 0; i < mode.length(); i++) {
-            tab[cursor] = (byte)mode.charAt(i);
+        for (int i = 0; i < mode.length(); i++) {
+            tab[cursor] = (byte) mode.charAt(i);
             cursor++;
         }
-        
+
         // ZERO
         tab[cursor] = ZERO;
-        
+
         return tab;
     }
-    
+
     // Fonction pour créer le packet DATA
     private byte[] createDataPacket(byte[] ack, byte[] data) {
         int tabSize = 2 + 2 + data.length;
         byte[] tab = new byte[tabSize];
-        
+
         // Code
         tab[0] = ZERO;
         tab[1] = DATA;
-        
+
         // ACK
         tab[2] = ack[0];
         tab[3] = ack[1];
-        
+
         // Data à partir de tab[4]
         System.arraycopy(data, 0, tab, 4, data.length);
-                
+
         return tab;
     }
-    
+
     // Fonction pour gérer les erreurs
     private void manageError(byte code) {
-        switch(code)
-        {
+        System.err.print("ERREUR : ");
+        switch (code) {
             case ERROR_UNDEFINED:
                 System.err.println("Erreur indéfinie");
                 break;
@@ -326,29 +283,35 @@ public class Client {
                 break;
         }
     }
-    
+
     // Fonction qui ajoute un à l'ACK reçu
     private void addACK(byte[] ack, byte[] received) {
-        int number = received[0] * 128 + received[1];
+        /*int number = received[0] * 128 + received[1];
         number++;
-        ack[0] = (byte)(number / 128);
-        ack[1] = (byte)(number % 128);
+        ack[0] = (byte) (number / 128);
+        ack[1] = (byte) (number % 128);*/
+        ack[1] = (byte)(received[1] + 1);
+        if (ack[1] == 0) {
+            ack[0]++;
+        }
     }
-    
+
     // Fonction qui vérifie si le packet est du type indiqué
     private boolean isType(byte[] packet, byte type) {
         return (packet[0] == 0 && packet[1] == type);
     }
+
     // Fonction qui vérifie si le packet est de type ACK
     private boolean isFirstACK(byte[] packet) {
         return (packet[0] == 0 && packet[1] == ACK
                 && packet[2] == 0 && packet[3] == 0);
     }
-    
+
     // Fonction pour afficher un tableau d'octet (pour tester essentiellement)
     private void printBytes(byte[] array) {
-        for(int i = 0; i < array.length; i++)
+        for (int i = 0; i < array.length; i++) {
             System.out.print(array[i]);
+        }
         System.out.println();
     }
 }
