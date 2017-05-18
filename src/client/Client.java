@@ -28,6 +28,8 @@ public class Client {
     public static final byte ERROR_FILE_EXISTS = 6;
     public static final byte ERROR_USER = 7;
     
+    public static final byte ZERO = 0;
+    
     private static final String IP = "127.0.0.1";
     InetAddress inetAddress;
     private static final int PORT = 69;
@@ -60,6 +62,7 @@ public class Client {
             FileInputStream file = null;
             int block = 0;
             long fileLength = 0;
+            byte[] ack = new byte[2];
             // Lecture fichier local
             try {
             f = new File(filename);
@@ -74,14 +77,18 @@ public class Client {
             block = (int)fileLength / DATA_SIZE + 1;
             System.out.println("Block : " + block);
             
+            ack[0] = ZERO;
+            ack[1] = ZERO;
             do
             {
                 // Envoyer packet DATA
 
                 // Recevoir packet ACK
-
-                //if(isType(received, ACK)) // Si le serveur renvoie un ACK
+                socket.receive(packet);
+                receivedACK = packet.getData();
+                if(isType(receivedACK, ACK)) { // Si le serveur renvoie un ACK
                     block--;
+                }
             }while(block > 0);
 
             // Fermeture fichier local
@@ -116,18 +123,26 @@ public class Client {
     
     
     // Fonction pour créer le packet ACK
-    
-    // Fonction pour créer le packet DATA
+    private byte[] createACKPacket(byte[] ackNumber) {
+        byte[] tab = new byte[4];
+        
+        tab[0] = 0;
+        tab[1] = ACK;
+        
+        tab[2] = ackNumber[0];
+        tab[3] = ackNumber[1];
+        
+        return tab;
+    }
     
     // Fonction pour créer le packet request RRQ/WRQ
     private byte[] createRequestPacket(final byte code, final String filename, final String mode) {
         int tabSize = 2 + filename.length() + 1 + mode.length() + 1;
         byte[] tab = new byte[tabSize];
         int cursor = 0;
-        byte zero = 0;
         
         // CODE
-        tab[0] = zero;
+        tab[0] = ZERO;
         tab[1] = code;
         
         // FILENAME
@@ -138,7 +153,7 @@ public class Client {
 
         // ZERO
         cursor++;
-        tab[cursor] = zero;
+        tab[cursor] = ZERO;
         cursor++;
     
         // MODE
@@ -148,7 +163,26 @@ public class Client {
         }
         
         // ZERO
-        tab[cursor] = zero;
+        tab[cursor] = ZERO;
+        
+        return tab;
+    }
+    
+    // Fonction pour créer le packet DATA
+    private byte[] createDataPacket(byte[] ack, byte[] data) {
+        int tabSize = 2 + 2 + data.length;
+        byte[] tab = new byte[tabSize];
+        
+        // Code
+        tab[0] = ZERO;
+        tab[1] = DATA;
+        
+        // ACK
+        tab[2] = ack[0];
+        tab[3] = ack[1];
+        
+        // Data à partir de tab[4]
+        System.arraycopy(data, 0, tab, 4, data.length);
         
         return tab;
     }
