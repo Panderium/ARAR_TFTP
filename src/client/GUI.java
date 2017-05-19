@@ -8,6 +8,8 @@ package client;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -45,7 +47,7 @@ import javafx.stage.Stage;
  *
  * @author Corentin
  */
-public class GUI extends Application {
+public class GUI extends Application implements Observer {
     
     private Client client;
     private ObservableList<Node> messagesList;
@@ -209,25 +211,17 @@ public class GUI extends Application {
                     if (!serverAddressTextField.getText().matches("^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")) {
                         actiontarget.setText("L'adresse IP n'est pas valide.");
                     }else{
-                        int bufferSize = 2000;
-                        InetAddress iaServer;
-                        //IPAddress.setText(serverAddressTextField.getText());
-                       // portLabel.setText(serverPortTextField.getText());
                         try {
                             
                             client = new Client();
+                            Thread clientThread = new Thread(client);
+                            clientThread.start();
+                            
                             IPAddressSend.setText(serverAddressTextField.getText());
                             IPAddressReceive.setText(serverAddressTextField.getText());
                             portLabelSend.setText(String.valueOf(client.getPort()));
                             portLabelReceive.setText(String.valueOf(client.getPort()));
-                            //client.sendFile("fichier.txt");
-        
-                            //iaServer = InetAddress.getByName(serverAddressTextField.getText());
-                            //client = new Client(iaServer, userNameTextField.getText(), port, bufferSize);
-                            //client.setName(userNameTextField.getText());
-                            //client.addObserver(ClientMain.this);
-                            //Thread clientThread = new Thread(client);
-                            //clientThread.start();
+                            
                             primaryStage.setScene(mainScene);
                         } catch (Exception ex) {
                             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
@@ -422,4 +416,9 @@ public class GUI extends Application {
 
         return receiveFilePane;
     }  
+
+    @Override
+    public void update(Observable o, Object arg) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

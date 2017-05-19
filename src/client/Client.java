@@ -10,8 +10,9 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.Observable;
 
-public class Client {
+public class Client extends Observable  implements Runnable {
 
     public static final byte RRQ = 1;
     public static final byte WRQ = 2;
@@ -344,6 +345,11 @@ public class Client {
 
     public void setPacket(DatagramPacket packet) {
         this.packet = packet;
+    }
+
+    @Override
+    public void run() {
+       System.out.println("Running");
     }
     
     
