@@ -2,7 +2,8 @@ package client;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -35,13 +36,12 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-
-public class GUI extends Application {
+public class GUI extends Application implements Observer {
     
     private Client client;
-    private ObservableList<Node> messagesList;
-    private ScrollPane spReceive, spSend;
-    private FlowPane fpReceive, fpSend;
+    private ObservableList<Node> logsList;
+    private ScrollPane sp;
+    private FlowPane fp;
     private Label IPAddressLabelSend, IPAddressSend, portTextLabelSend,
             portLabelSend, fileLabelSend, IPAddressLabelReceive, IPAddressReceive,
             portTextLabelReceive,portLabelReceive, fileLabelReceive;
@@ -68,20 +68,20 @@ public class GUI extends Application {
         loginGrid.setVgap(10);
         loginGrid.setPadding(new Insets(25, 25, 25, 25));
 
-        Text loginSceneTitle = new Text("Log in");
+        Text loginSceneTitle = new Text("Démarrage du client");
         loginSceneTitle.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));
         loginGrid.add(loginSceneTitle, 1, 0, 2, 1);
         
-        Label serverAddress = new Label("Server address:");
+        Label serverAddress = new Label("Adresse IP du serveur:");
         loginGrid.add(serverAddress, 0, 1);
         
         TextField serverAddressTextField = new TextField();
         loginGrid.add(serverAddressTextField, 1, 1);
 
-        Button signInButton = new Button("Sign in");
+        Button startButton = new Button("Start");
         HBox hbBtn = new HBox(10);
         hbBtn.setAlignment(Pos.BOTTOM_RIGHT);
-        hbBtn.getChildren().add(signInButton);
+        hbBtn.getChildren().add(startButton);
         loginGrid.add(hbBtn, 1, 3);
 
         final Text actiontarget = new Text();
@@ -95,21 +95,12 @@ public class GUI extends Application {
         
         // Fenêtre principale
         
-        this.fpReceive = new FlowPane();
-        this.messagesList = this.fpReceive.getChildren();
-        this.spReceive = new ScrollPane();
-        this.spReceive.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        this.spReceive.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-        this.spReceive.setContent(this.fpReceive);
-        
-        this.fpSend = new FlowPane();
-        this.messagesList = this.fpSend.getChildren();
-        this.spSend = new ScrollPane();
-        this.spSend.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        this.spSend.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-        this.spSend.setContent(this.fpSend);
-        
-        
+        this.fp = new FlowPane();
+        this.logsList = this.fp.getChildren();
+        this.sp = new ScrollPane();
+        this.sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        this.sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        this.sp.setContent(this.fp);
         
         this.IPAddressLabelSend = new Label("IP address:");
         this.IPAddressLabelSend.setFont(Font.font("Tahoma", FontWeight.NORMAL, 12));
@@ -169,6 +160,13 @@ public class GUI extends Application {
         
         this.openFileChooserReceive = new Button("Choisir");
         
+        
+        GridPane mainGrid = new GridPane();
+        mainGrid.setAlignment(Pos.CENTER);
+        mainGrid.setHgap(10);
+        mainGrid.setVgap(10);
+        //mainGrid.setPadding(new Insets(25, 25, 25, 25));
+        
         TabPane tabs = new TabPane();
         Tab sendTab = new Tab();
         sendTab.setText("Envoyer");
@@ -182,12 +180,14 @@ public class GUI extends Application {
         
         tabs.getTabs().addAll(sendTab, receiveTab);
         
-        Scene mainScene = new Scene(tabs, 500, 450); // Manage scene size
+        mainGrid.add(tabs, 0, 0);
+        mainGrid.add(this.sp, 0, 6);
+        Scene mainScene = new Scene(mainGrid, 500, 450);
         primaryStage.setTitle("Client TFTP");
         
        
         
-        signInButton.setOnAction(new EventHandler<ActionEvent>() {
+        startButton.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
             public void handle(ActionEvent e) {
@@ -197,25 +197,18 @@ public class GUI extends Application {
                     if (!serverAddressTextField.getText().matches("^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")) {
                         actiontarget.setText("L'adresse IP n'est pas valide.");
                     }else{
-                        int bufferSize = 2000;
-                        InetAddress iaServer;
-                        //IPAddress.setText(serverAddressTextField.getText());
-                       // portLabel.setText(serverPortTextField.getText());
                         try {
                             
                             client = new Client();
+                            client.addObserver(GUI.this);
+                            Thread clientThread = new Thread(client);
+                            clientThread.start();
+                            
                             IPAddressSend.setText(serverAddressTextField.getText());
                             IPAddressReceive.setText(serverAddressTextField.getText());
                             portLabelSend.setText(String.valueOf(client.getPort()));
                             portLabelReceive.setText(String.valueOf(client.getPort()));
-                            //client.sendFile("fichier.txt");
-        
-                            //iaServer = InetAddress.getByName(serverAddressTextField.getText());
-                            //client = new Client(iaServer, userNameTextField.getText(), port, bufferSize);
-                            //client.setName(userNameTextField.getText());
-                            //client.addObserver(ClientMain.this);
-                            //Thread clientThread = new Thread(client);
-                            //clientThread.start();
+                            
                             primaryStage.setScene(mainScene);
                         } catch (Exception ex) {
                             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
@@ -234,14 +227,13 @@ public class GUI extends Application {
                 if (!newValue.matches("\\d\\.*")) {
                     serverAddressTextField.setText(newValue.replaceAll("[^\\d\\.]", ""));
                 }
-
             }
         });
         
         this.logOutButtonSend.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               messagesList.clear();
+               logsList.clear();
                serverAddressTextField.setText("");
                actiontarget.setText("");
                primaryStage.setScene(loginScene);
@@ -251,7 +243,7 @@ public class GUI extends Application {
         this.logOutButtonReceive.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               messagesList.clear();
+               logsList.clear();
                serverAddressTextField.setText("");
                actiontarget.setText("");
                primaryStage.setScene(loginScene);
@@ -261,16 +253,16 @@ public class GUI extends Application {
         this.clearChatButtonSend.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               messagesList.clear();
-               spSend.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+               logsList.clear();
+               sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
             }
         });
         
         this.clearChatButtonReceive.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               messagesList.clear();
-               spReceive.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+               logsList.clear();
+               sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
             }
         });
         
@@ -298,8 +290,10 @@ public class GUI extends Application {
             @Override
             public void handle(ActionEvent e) {
                 try {
-                    System.out.println("sendFile(" + serverAddressTextField.getText() + ", " + 69 + ", " + fileToSend.getName() + ")");
-                    client.sendFile(serverAddressTextField.getText(), 69, fileToSend.getName());
+                    if(fileToSend != null)
+                        client.sendFile(serverAddressTextField.getText(), 69, fileToSend.getAbsolutePath());
+                    else
+                        writeErrorInLog("ERREUR : Aucun fichier n'a été choisi.");
                 } catch (IOException ex) {
                     Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -310,7 +304,15 @@ public class GUI extends Application {
             @Override
             public void handle(ActionEvent e) {
                 try {
-                    client.receiveFile(serverAddressTextField.getText(), 69, fileNameOnServerTextField.getText(), downloadPath.getPath() + fileNameOnClientTextField.getText());
+                    if(fileNameOnClientTextField.getText() == "")
+                        writeErrorInLog("ERREUR : Le nom du fichier local n'a pas été renseigné.");
+                    else if(fileNameOnServerTextField.getText() == "")
+                        writeErrorInLog("ERREUR : Le nom du fichier distant n'a pas été renseigné.");
+                    else if(downloadPath == null)
+                        writeErrorInLog("ERREUR : Le répertoire de téléchargement n'a pas été choisi.");
+                    else 
+                        client.receiveFile(serverAddressTextField.getText(), 69, fileNameOnServerTextField.getText(),
+                                downloadPath.getPath() + "\\" + fileNameOnClientTextField.getText());
                 } catch (IOException ex) {
                     Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -321,7 +323,7 @@ public class GUI extends Application {
             @Override
             public void handle(KeyEvent keyEvent) {
                 if (keyEvent.getCode() == KeyCode.ENTER)  {
-                    signInButton.fire();
+                    startButton.fire();
                 }
             }
         });
@@ -345,14 +347,12 @@ public class GUI extends Application {
         });
     }
 
-
     private Pane sendFileTab() {
         
         GridPane sendFilePane = new GridPane();
         sendFilePane.setHgap(10);
         sendFilePane.setVgap(10);
         sendFilePane.setPadding(new Insets(10, 10, 10, 10));
-        
         
         sendFilePane.add(this.IPAddressLabelSend, 0, 0);
         sendFilePane.add(this.IPAddressSend, 1, 0);
@@ -365,9 +365,6 @@ public class GUI extends Application {
         sendFilePane.add(this.fileLabelSend, 2, 1,  3, 1);
         
         sendFilePane.add(this.sendFile, 0, 2);
-        
-        
-        sendFilePane.add(this.spSend, 0, 3, 6, 30);
 
         return sendFilePane;
     }
@@ -406,12 +403,46 @@ public class GUI extends Application {
         receiveFilePane.add(this.openFileChooserReceive, 2, 3, 2, 1);
         this.fileLabelReceive = new Label();
         this.fileLabelReceive.setTextFill(Color.GREEN);
-        receiveFilePane.add(this.fileLabelReceive, 4, 3,  3, 1);
+        receiveFilePane.add(this.fileLabelReceive, 4, 3,  2, 1);
         
         receiveFilePane.add(this.receiveFile, 3, 4);
-        
-        receiveFilePane.add(this.spReceive, 0, 5, 6, 20);
 
         return receiveFilePane;
     }  
+    
+    public void writeMessageInLog(String message){
+        writeInLog(message, Color.BLACK);
+    }
+    
+    public void writeSuccessInLog(String message){
+        writeInLog(message, Color.GREEN);
+    }
+    
+    public void writeWarningInLog(String message){
+        writeInLog(message, Color.ORANGE);
+    }
+    
+    public void writeErrorInLog(String message){
+        writeInLog(message, Color.FIREBRICK);
+    }
+    
+     public void writeInLog(String message, Color color){
+        
+        Text finalMessage = new Text(message);
+        
+        finalMessage.setWrappingWidth(460);
+        finalMessage.setFill(color);
+        
+        this.logsList.add(finalMessage);
+        if(sp.getVbarPolicy() == ScrollPane.ScrollBarPolicy.NEVER)
+            sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        if(o instanceof Client){
+            System.out.println(this.client.getError());
+            writeErrorInLog(this.client.getError());
+        }
+    }
 }
