@@ -81,20 +81,20 @@ public class GUI extends Application implements Observer {
         loginGrid.setVgap(10);
         loginGrid.setPadding(new Insets(25, 25, 25, 25));
 
-        Text loginSceneTitle = new Text("Log in");
+        Text loginSceneTitle = new Text("Démarrage du client");
         loginSceneTitle.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));
         loginGrid.add(loginSceneTitle, 1, 0, 2, 1);
         
-        Label serverAddress = new Label("Server address:");
+        Label serverAddress = new Label("Adresse IP du serveur:");
         loginGrid.add(serverAddress, 0, 1);
         
         TextField serverAddressTextField = new TextField();
         loginGrid.add(serverAddressTextField, 1, 1);
 
-        Button signInButton = new Button("Sign in");
+        Button startButton = new Button("Start");
         HBox hbBtn = new HBox(10);
         hbBtn.setAlignment(Pos.BOTTOM_RIGHT);
-        hbBtn.getChildren().add(signInButton);
+        hbBtn.getChildren().add(startButton);
         loginGrid.add(hbBtn, 1, 3);
 
         final Text actiontarget = new Text();
@@ -200,7 +200,7 @@ public class GUI extends Application implements Observer {
         
        
         
-        signInButton.setOnAction(new EventHandler<ActionEvent>() {
+        startButton.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
             public void handle(ActionEvent e) {
@@ -336,7 +336,7 @@ public class GUI extends Application implements Observer {
             @Override
             public void handle(KeyEvent keyEvent) {
                 if (keyEvent.getCode() == KeyCode.ENTER)  {
-                    signInButton.fire();
+                    startButton.fire();
                 }
             }
         });
