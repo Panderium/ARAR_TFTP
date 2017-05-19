@@ -271,7 +271,7 @@ public class GUI extends Application implements Observer {
             public void handle(ActionEvent e) {
                fileToSend = fileChooserSend.showOpenDialog(primaryStage);
                     if (fileToSend != null) {
-                        fileLabelSend.setText(fileToSend.getAbsolutePath());;
+                        fileLabelSend.setText(fileToSend.getName());;
                     }
             }
         });
@@ -291,7 +291,7 @@ public class GUI extends Application implements Observer {
             public void handle(ActionEvent e) {
                 try {
                     if(fileToSend != null)
-                        client.sendFile(serverAddressTextField.getText(), 69, fileToSend.getAbsolutePath());
+                        client.sendFile(serverAddressTextField.getText(), 69, fileToSend.getName());
                     else
                         writeErrorInLog("ERREUR : Aucun fichier n'a été choisi.");
                 } catch (IOException ex) {
