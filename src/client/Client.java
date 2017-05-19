@@ -11,6 +11,9 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Observable;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
 
 public class Client extends Observable  implements Runnable {
 
@@ -37,6 +40,7 @@ public class Client extends Observable  implements Runnable {
     private DatagramPacket packet;
     private static final int DATA_SIZE = 512;
     private int port;
+    private String error;
 
     public static void main(String[] args) throws IOException {
         Client client = new Client();
@@ -72,7 +76,10 @@ public class Client extends Observable  implements Runnable {
                 file = new FileInputStream(filename);
 
             } catch (FileNotFoundException e) {
+                this.error = "Erreur ouverture fichier : " + e;
                 System.err.println("Erreur ouverture fichier : " + e);
+                setChanged();
+		notifyObservers(this.error);
                 return;
             }
 
@@ -130,7 +137,11 @@ public class Client extends Observable  implements Runnable {
             // On envoie le code d'erreur la fonction explicitant l'erreur
             manageError(receivedACK[3]);
         } else {
+            
+            this.error = "Erreur ouverture fichier : " + receivedACK[1];
             System.err.println("PAS RECU ACK, code reçu : " + receivedACK[1]);
+            setChanged();
+            notifyObservers(this.error);
         }
         socket.close();
     }
@@ -255,33 +266,37 @@ public class Client extends Observable  implements Runnable {
 
     // Fonction pour gérer les erreurs
     private void manageError(byte code) {
-        System.err.print("ERREUR : ");
+        String error = "ERREUR : ";
         switch (code) {
             case ERROR_UNDEFINED:
-                System.err.println("Erreur indéfinie");
+                error += "Erreur indéfinie";
                 break;
             case ERROR_FILE_NOT_FOUND:
-                System.err.println("Fichier non trouvé");
+                error += "Fichier non trouvé";
                 break;
             case ERROR_VIOLATION:
-                System.err.println("Violation d'accès");
+                error += "Violation d'accès";
                 break;
             case ERROR_FULL:
-                System.err.println("Disque plein ou répartition dépassée");
+                error += "Disque plein ou répartition dépassée";
                 break;
             case ERROR_ILLEGAL:
-                System.err.println("Opération TFTP illégale");
+                error += "Opération TFTP illégale";
                 break;
             case ERROR_UNKNOWN:
-                System.err.println("Transfert ID inconnu");
+                error += "Transfert ID inconnu";
                 break;
             case ERROR_FILE_EXISTS:
-                System.err.println("Fichier déjà existant");
+                error += "Fichier déjà existant";
                 break;
             case ERROR_USER:
-                System.err.println("Aucun utilisateur");
+                error += "Aucun utilisateur";
                 break;
         }
+        System.out.println(error);
+        this.error = error;
+        setChanged();
+        notifyObservers(this.error);
     }
 
     // Fonction qui ajoute un à l'ACK reçu
@@ -345,6 +360,14 @@ public class Client extends Observable  implements Runnable {
 
     public void setPacket(DatagramPacket packet) {
         this.packet = packet;
+    }
+
+    public String getError() {
+        return error;
+    }
+
+    public void setError(String error) {
+        this.error = error;
     }
 
     @Override

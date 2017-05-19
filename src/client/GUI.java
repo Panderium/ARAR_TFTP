@@ -7,7 +7,6 @@ package client;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.logging.Level;
@@ -50,9 +49,9 @@ import javafx.stage.Stage;
 public class GUI extends Application implements Observer {
     
     private Client client;
-    private ObservableList<Node> messagesList;
-    private ScrollPane spReceive, spSend;
-    private FlowPane fpReceive, fpSend;
+    private ObservableList<Node> logsList;
+    private ScrollPane sp;
+    private FlowPane fp;
     private Label IPAddressLabelSend, IPAddressSend, portTextLabelSend,
             portLabelSend, fileLabelSend, IPAddressLabelReceive, IPAddressReceive,
             portTextLabelReceive,portLabelReceive, fileLabelReceive;
@@ -109,21 +108,12 @@ public class GUI extends Application implements Observer {
         
         // Fenêtre principale
         
-        this.fpReceive = new FlowPane();
-        this.messagesList = this.fpReceive.getChildren();
-        this.spReceive = new ScrollPane();
-        this.spReceive.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        this.spReceive.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-        this.spReceive.setContent(this.fpReceive);
-        
-        this.fpSend = new FlowPane();
-        this.messagesList = this.fpSend.getChildren();
-        this.spSend = new ScrollPane();
-        this.spSend.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        this.spSend.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-        this.spSend.setContent(this.fpSend);
-        
-        
+        this.fp = new FlowPane();
+        this.logsList = this.fp.getChildren();
+        this.sp = new ScrollPane();
+        this.sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        this.sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        this.sp.setContent(this.fp);
         
         this.IPAddressLabelSend = new Label("IP address:");
         this.IPAddressLabelSend.setFont(Font.font("Tahoma", FontWeight.NORMAL, 12));
@@ -183,6 +173,13 @@ public class GUI extends Application implements Observer {
         
         this.openFileChooserReceive = new Button("Choisir");
         
+        
+        GridPane mainGrid = new GridPane();
+        mainGrid.setAlignment(Pos.CENTER);
+        mainGrid.setHgap(10);
+        mainGrid.setVgap(10);
+        //mainGrid.setPadding(new Insets(25, 25, 25, 25));
+        
         TabPane tabs = new TabPane();
         Tab sendTab = new Tab();
         sendTab.setText("Envoyer");
@@ -196,7 +193,9 @@ public class GUI extends Application implements Observer {
         
         tabs.getTabs().addAll(sendTab, receiveTab);
         
-        Scene mainScene = new Scene(tabs, 500, 450); // Manage scene size
+        mainGrid.add(tabs, 0, 0);
+        mainGrid.add(this.sp, 0, 6);
+        Scene mainScene = new Scene(mainGrid, 500, 450);
         primaryStage.setTitle("Client TFTP");
         
        
@@ -214,6 +213,7 @@ public class GUI extends Application implements Observer {
                         try {
                             
                             client = new Client();
+                            client.addObserver(GUI.this);
                             Thread clientThread = new Thread(client);
                             clientThread.start();
                             
@@ -246,7 +246,7 @@ public class GUI extends Application implements Observer {
         this.logOutButtonSend.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               messagesList.clear();
+               logsList.clear();
                serverAddressTextField.setText("");
                actiontarget.setText("");
                primaryStage.setScene(loginScene);
@@ -256,7 +256,7 @@ public class GUI extends Application implements Observer {
         this.logOutButtonReceive.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               messagesList.clear();
+               logsList.clear();
                serverAddressTextField.setText("");
                actiontarget.setText("");
                primaryStage.setScene(loginScene);
@@ -266,16 +266,16 @@ public class GUI extends Application implements Observer {
         this.clearChatButtonSend.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               messagesList.clear();
-               spSend.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+               logsList.clear();
+               sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
             }
         });
         
         this.clearChatButtonReceive.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent e) {
-               messagesList.clear();
-               spReceive.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+               logsList.clear();
+               sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
             }
         });
         
@@ -303,7 +303,10 @@ public class GUI extends Application implements Observer {
             @Override
             public void handle(ActionEvent e) {
                 try {
-                    client.sendFile(serverAddressTextField.getText(), 69, fileToSend.getAbsolutePath());
+                    if(fileToSend != null)
+                        client.sendFile(serverAddressTextField.getText(), 69, fileToSend.getAbsolutePath());
+                    else
+                        writeErrorInLog("ERREUR : Aucun fichier n'a été choisi.");
                 } catch (IOException ex) {
                     Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -314,7 +317,15 @@ public class GUI extends Application implements Observer {
             @Override
             public void handle(ActionEvent e) {
                 try {
-                    client.receiveFile(serverAddressTextField.getText(), 69, fileNameOnServerTextField.getText(), downloadPath.getPath() + "\\" + fileNameOnClientTextField.getText());
+                    if(fileNameOnClientTextField.getText() == "")
+                        writeErrorInLog("ERREUR : Le nom du fichier local n'a pas été renseigné.");
+                    else if(fileNameOnServerTextField.getText() == "")
+                        writeErrorInLog("ERREUR : Le nom du fichier distant n'a pas été renseigné.");
+                    else if(downloadPath == null)
+                        writeErrorInLog("ERREUR : Le répertoire de téléchargement n'a pas été choisi.");
+                    else 
+                        client.receiveFile(serverAddressTextField.getText(), 69, fileNameOnServerTextField.getText(),
+                                downloadPath.getPath() + "\\" + fileNameOnClientTextField.getText());
                 } catch (IOException ex) {
                     Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -367,9 +378,6 @@ public class GUI extends Application implements Observer {
         sendFilePane.add(this.fileLabelSend, 2, 1,  3, 1);
         
         sendFilePane.add(this.sendFile, 0, 2);
-        
-        
-        sendFilePane.add(this.spSend, 0, 3, 6, 30);
 
         return sendFilePane;
     }
@@ -411,14 +419,43 @@ public class GUI extends Application implements Observer {
         receiveFilePane.add(this.fileLabelReceive, 4, 3,  2, 1);
         
         receiveFilePane.add(this.receiveFile, 3, 4);
-        
-        receiveFilePane.add(this.spReceive, 0, 5, 6, 20);
 
         return receiveFilePane;
     }  
+    
+    public void writeMessageInLog(String message){
+        writeInLog(message, Color.BLACK);
+    }
+    
+    public void writeSuccessInLog(String message){
+        writeInLog(message, Color.GREEN);
+    }
+    
+    public void writeWarningInLog(String message){
+        writeInLog(message, Color.ORANGE);
+    }
+    
+    public void writeErrorInLog(String message){
+        writeInLog(message, Color.FIREBRICK);
+    }
+    
+     public void writeInLog(String message, Color color){
+        
+        Text finalMessage = new Text(message);
+        
+        finalMessage.setWrappingWidth(460);
+        finalMessage.setFill(color);
+        
+        this.logsList.add(finalMessage);
+        if(sp.getVbarPolicy() == ScrollPane.ScrollBarPolicy.NEVER)
+            sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+    }
 
     @Override
     public void update(Observable o, Object arg) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        if(o instanceof Client){
+            System.out.println(this.client.getError());
+            writeErrorInLog(this.client.getError());
+        }
     }
 }
