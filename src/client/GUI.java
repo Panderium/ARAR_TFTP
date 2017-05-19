@@ -246,7 +246,6 @@ public class GUI extends Application {
                 if (!newValue.matches("\\d\\.*")) {
                     serverAddressTextField.setText(newValue.replaceAll("[^\\d\\.]", ""));
                 }
-
             }
         });
         
@@ -321,7 +320,7 @@ public class GUI extends Application {
             @Override
             public void handle(ActionEvent e) {
                 try {
-                    client.receiveFile(serverAddressTextField.getText(), 69, fileNameOnServerTextField.getText(), downloadPath.getPath() + fileNameOnClientTextField.getText());
+                    client.receiveFile(serverAddressTextField.getText(), 69, fileNameOnServerTextField.getText(), downloadPath.getPath() + "\\" + fileNameOnClientTextField.getText());
                 } catch (IOException ex) {
                     Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -356,14 +355,12 @@ public class GUI extends Application {
         });
     }
 
-
     private Pane sendFileTab() {
         
         GridPane sendFilePane = new GridPane();
         sendFilePane.setHgap(10);
         sendFilePane.setVgap(10);
         sendFilePane.setPadding(new Insets(10, 10, 10, 10));
-        
         
         sendFilePane.add(this.IPAddressLabelSend, 0, 0);
         sendFilePane.add(this.IPAddressSend, 1, 0);
@@ -417,7 +414,7 @@ public class GUI extends Application {
         receiveFilePane.add(this.openFileChooserReceive, 2, 3, 2, 1);
         this.fileLabelReceive = new Label();
         this.fileLabelReceive.setTextFill(Color.GREEN);
-        receiveFilePane.add(this.fileLabelReceive, 4, 3,  3, 1);
+        receiveFilePane.add(this.fileLabelReceive, 4, 3,  2, 1);
         
         receiveFilePane.add(this.receiveFile, 3, 4);
         
