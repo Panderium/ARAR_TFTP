@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package client;
 
 import java.io.File;
@@ -41,10 +36,6 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 
-/**
- *
- * @author Corentin
- */
 public class GUI extends Application {
     
     private Client client;
@@ -62,9 +53,6 @@ public class GUI extends Application {
     private FileChooser fileChooserSend;
     private DirectoryChooser directoryChooser;
     
-    /**
-     * @param args the command line arguments
-     */
     public static void main(String[] args) {
         Application.launch(GUI.class, args);
     }
@@ -310,7 +298,8 @@ public class GUI extends Application {
             @Override
             public void handle(ActionEvent e) {
                 try {
-                    client.sendFile(serverAddressTextField.getText(), 69, fileToSend.getAbsolutePath());
+                    System.out.println("sendFile(" + serverAddressTextField.getText() + ", " + 69 + ", " + fileToSend.getName() + ")");
+                    client.sendFile(serverAddressTextField.getText(), 69, fileToSend.getName());
                 } catch (IOException ex) {
                     Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
                 }

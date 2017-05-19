@@ -1,5 +1,6 @@
 package client;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -39,12 +40,24 @@ public class Client {
 
     public static void main(String[] args) throws IOException {
         Client client = new Client();
-        client.sendFile("127.0.0.1", 69, "fichier_gros.txt");
-        //client.receiveFile("127.0.0.1", 69,"fichier_gros.txt", "grosDL.txt");
+        System.out.println("FULL PATH : " + System.getProperty("user.dir"));
+        client.sendFile("127.0.0.1", 69, "fichier.txt");
+        //client.receiveFile("127.0.0.1", 69, "C:\\Nouveau dossier (2)\\fichier.txt", "C:\\xampp\\htdocs\\DL.txt");
     }
 
     //rajouter une valeur de retourCrEm
     public void sendFile(String serverIP, int serverPort, String filename) throws FileNotFoundException, IOException {
+        File f = new File(filename);
+        System.out.println("========================================");
+        System.out.println("          name:" + f.getName());
+        System.out.println("  is directory:" + f.isDirectory());
+        System.out.println("        exists:" + f.exists());
+        System.out.println("          path:" + f.getPath());
+        System.out.println(" absolute file:" + f.getAbsoluteFile());
+        System.out.println(" absolute path:" + f.getAbsolutePath());
+        System.out.println("canonical file:" + f.getCanonicalFile());
+        System.out.println("canonical path:" + f.getCanonicalPath());
+        System.out.println();System.out.println();
         
         this.port = serverPort;
         
@@ -68,7 +81,7 @@ public class Client {
             // Lecture fichier local
             try {
 
-                file = new FileInputStream(filename);
+                file = new FileInputStream(f);
 
             } catch (FileNotFoundException e) {
                 System.err.println("Erreur ouverture fichier : " + e);
@@ -117,6 +130,7 @@ public class Client {
                     addACK(ack, received);
                 } else if (isType(receivedPacket, ERROR)) {
                     // On envoie le code d'erreur la fonction explicitant l'erreur
+                    eof = true;
                     manageError(receivedPacket[3]);
                 }
             } while (!eof);
@@ -127,6 +141,8 @@ public class Client {
             }
         } else if (isType(receivedACK, ERROR)) {
             // On envoie le code d'erreur la fonction explicitant l'erreur
+            System.out.print("ACK : ");
+            printBytes(receivedACK);
             manageError(receivedACK[3]);
         } else {
             System.err.println("PAS RECU ACK, code reçu : " + receivedACK[1]);
@@ -174,10 +190,7 @@ public class Client {
                 System.out.println("ACK : " + ack[0] + " | " + ack[1]);
                 
                 //preparation prochain ack
-                ack[1]++;
-                if (ack[1] == 0) {
-                    ack[0]++;
-                }
+                addACK(ack, ack);
             } else if (isType(data.getData(), ERROR)) {
                 manageError(data.getData()[3]);
             }
@@ -329,22 +342,4 @@ public class Client {
     public void setPort(int port) {
         this.port = port;
     }
-
-    public DatagramSocket getSocket() {
-        return socket;
-    }
-
-    public void setSocket(DatagramSocket socket) {
-        this.socket = socket;
-    }
-
-    public DatagramPacket getPacket() {
-        return packet;
-    }
-
-    public void setPacket(DatagramPacket packet) {
-        this.packet = packet;
-    }
-    
-    
 }
