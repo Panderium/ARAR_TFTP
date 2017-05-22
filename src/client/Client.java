@@ -42,13 +42,21 @@ public class Client extends Observable  implements Runnable {
     private static final int DATA_SIZE = 512;
     private int port;
     private String error;
-
+    private String success;
+    
     public static void main(String[] args) throws IOException {
         Client client = new Client();
         System.out.println("FULL PATH : " + System.getProperty("user.dir"));
         client.sendFile("127.0.0.1", 69, "fichier.txt");
         //client.receiveFile("127.0.0.1", 69, "C:\\Nouveau dossier (2)\\fichier.txt", "C:\\xampp\\htdocs\\DL.txt");
     }
+
+    public Client() {
+        this.error = "";
+        this.success = "";
+    }
+    
+    
 
     //rajouter une valeur de retourCrEm
     public void sendFile(String serverIP, int serverPort, String filename) throws FileNotFoundException, IOException {
@@ -85,7 +93,7 @@ public class Client extends Observable  implements Runnable {
             byte[] ack = new byte[2];
             // Lecture fichier local
             try {
-
+                
                 file = new FileInputStream(f);
 
             } catch (FileNotFoundException e) {
@@ -142,9 +150,12 @@ public class Client extends Observable  implements Runnable {
                     manageError(receivedPacket[3]);
                 }
             } while (!eof);
-
+                
             // Fermeture fichier local
             if (file != null) {
+                this.success = "Le fichier " + f.getName() + " a bien été envoyé.";
+                setChanged();
+                notifyObservers(this.success);
                 file.close();
             }
         } else if (isType(receivedACK, ERROR)) {
@@ -209,7 +220,13 @@ public class Client extends Observable  implements Runnable {
         } while (data.getLength() >= 512);
 
         // Fermeture fichier local
-        localFile.close();
+        if (localFile != null) {
+            this.success = "Le fichier " + filename + " a été enregistré en local à l'emplacement suivant : " + localName + ".";
+            setChanged();
+            notifyObservers(this.success);
+            localFile.close();
+        }
+        
     }
 
     // Fonction pour créer le packet ACK
@@ -365,6 +382,14 @@ public class Client extends Observable  implements Runnable {
 
     public void setError(String error) {
         this.error = error;
+    }
+
+    public String getSuccess() {
+        return success;
+    }
+
+    public void setSuccess(String success) {
+        this.success = success;
     }
 
     @Override

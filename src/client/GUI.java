@@ -70,7 +70,7 @@ public class GUI extends Application implements Observer {
 
         Text loginSceneTitle = new Text("Démarrage du client");
         loginSceneTitle.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));
-        loginGrid.add(loginSceneTitle, 1, 0, 2, 1);
+        loginGrid.add(loginSceneTitle, 0, 0, 2, 1);
         
         Label serverAddress = new Label("Adresse IP du serveur:");
         loginGrid.add(serverAddress, 0, 1);
@@ -162,7 +162,7 @@ public class GUI extends Application implements Observer {
         
         
         GridPane mainGrid = new GridPane();
-        mainGrid.setAlignment(Pos.CENTER);
+        mainGrid.setAlignment(Pos.TOP_CENTER);
         mainGrid.setHgap(10);
         mainGrid.setVgap(10);
         //mainGrid.setPadding(new Insets(25, 25, 25, 25));
@@ -180,8 +180,8 @@ public class GUI extends Application implements Observer {
         
         tabs.getTabs().addAll(sendTab, receiveTab);
         
-        mainGrid.add(tabs, 0, 0);
-        mainGrid.add(this.sp, 0, 6);
+        mainGrid.add(tabs, 0, 0, 50, 1);
+        mainGrid.add(this.sp, 0, 4,50,10);
         Scene mainScene = new Scene(mainGrid, 500, 450);
         primaryStage.setTitle("Client TFTP");
         
@@ -236,6 +236,11 @@ public class GUI extends Application implements Observer {
                logsList.clear();
                serverAddressTextField.setText("");
                actiontarget.setText("");
+               fileLabelReceive.setText("");
+               fileLabelSend.setText("");
+               fileNameOnServerTextField.setText("");
+               fileNameOnClientTextField.setText("");
+               
                primaryStage.setScene(loginScene);
             }
         });
@@ -246,6 +251,11 @@ public class GUI extends Application implements Observer {
                logsList.clear();
                serverAddressTextField.setText("");
                actiontarget.setText("");
+               fileLabelReceive.setText("");
+               fileLabelSend.setText("");
+               fileNameOnServerTextField.setText("");
+               fileNameOnClientTextField.setText("");
+               
                primaryStage.setScene(loginScene);
             }
         });
@@ -271,7 +281,7 @@ public class GUI extends Application implements Observer {
             public void handle(ActionEvent e) {
                fileToSend = fileChooserSend.showOpenDialog(primaryStage);
                     if (fileToSend != null) {
-                        fileLabelSend.setText(fileToSend.getName());;
+                        fileLabelSend.setText(fileToSend.getName());
                     }
             }
         });
@@ -281,7 +291,7 @@ public class GUI extends Application implements Observer {
             public void handle(ActionEvent e) {
                 downloadPath = directoryChooser.showDialog(primaryStage);
                     if (downloadPath != null) {
-                        fileLabelReceive.setText(downloadPath.getName());;
+                        fileLabelReceive.setText(downloadPath.getName());
                     }
             }
         });
@@ -441,8 +451,15 @@ public class GUI extends Application implements Observer {
     @Override
     public void update(Observable o, Object arg) {
         if(o instanceof Client){
-            System.out.println(this.client.getError());
-            writeErrorInLog(this.client.getError());
+            if(this.client.getError().equals("") && !this.client.getSuccess().equals("")){
+                System.out.println(this.client.getSuccess());
+                writeSuccessInLog(this.client.getSuccess());
+                this.client.setSuccess("");
+            }else if(!this.client.getError().equals("") && this.client.getSuccess().equals("")){
+                System.out.println(this.client.getError());
+                writeErrorInLog(this.client.getError());
+                this.client.setError("");
+            }
         }
     }
 }
